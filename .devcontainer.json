@@ -1,0 +1,23 @@
+{
+    "image": "mcr.microsoft.com/devcontainers/base:jammy",
+    "features": {
+        "ghcr.io/devcontainers/features/azure-cli:latest": {},
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:latest": {},
+        "ghcr.io/devcontainers/features/dotnet:latest": {},
+        "ghcr.io/devcontainers/features/rust:latest": {},
+        "ghcr.io/ljtill/features/bicep:latest": {}
+    },
+    "customizations": {},
+    "mounts": [
+        {
+            "source": "/home/lytill/.bash_aliases",
+            "target": "/home/vscode/.bash_aliases",
+            "type": "bind"
+        },
+        {
+            "source": "azure",
+            "target": "/home/vscode/.azure",
+            "type": "volume"
+        }
+    ]
+}
