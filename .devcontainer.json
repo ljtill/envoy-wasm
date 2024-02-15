@@ -8,7 +8,13 @@
         "ghcr.io/ljtill/features/bicep:latest": {},
         "ghcr.io/ljtill/features/wasmtime:latest": {}
     },
-    "customizations": {},
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.makefile-tools"
+            ]
+        }
+    },
     "containerEnv": {
         "DOTNET_NOLOGO": "true"
     },
