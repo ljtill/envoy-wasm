@@ -5,7 +5,6 @@ admin:
       port_value: 9901
 
 static_resources:
-
   listeners:
   - name: listener_0
     address:
@@ -52,7 +51,6 @@ static_resources:
                 route:
                   host_rewrite_literal: www.bing.com
                   cluster: service_bing_com
-
   clusters:
   - name: service_bing_com
     type: LOGICAL_DNS
