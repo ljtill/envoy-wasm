@@ -11,36 +11,46 @@ help: ## Display this help content.
 
 .PHONY: build
 build: ## Build module and proxy artifacts.
+	@echo "=> (module) Compiling .NET source..."
+	@dotnet build ./modules/dotnet/dotnet.csproj
+
 	@echo "=> (module) Compiling Rust source..."
 	@rustup target add wasm32-wasi
 	@cargo build --manifest-path ./modules/rust/Cargo.toml --target wasm32-wasi
 
-	@echo "=> (module) Compiling .NET source..."
-	@dotnet build ./modules/dotnet/dotnet.csproj
+	@echo "=> (proxy) Building .NET image..."
+	@docker build --build-arg MOD_PATH=./modules/dotnet/bin/Debug/net8.0/wasi-wasm/dotnet.wasm -t envoy:dotnet --file ./proxies/envoy/Dockerfile .
 
 	@echo "=> (proxy) Building Rust image..."
 	@docker build --build-arg MOD_PATH=./modules/rust/target/wasm32-wasi/debug/module.wasm -t envoy:rust --file ./proxies/envoy/Dockerfile .
 
-	@echo "=> (proxy) Building .NET image..."
-	@docker build --build-arg MOD_PATH=./modules/dotnet/bin/Debug/net8.0/wasi-wasm/dotnet.wasm -t envoy:dotnet --file ./proxies/envoy/Dockerfile .
-
 .PHONY: clean
 clean: ## Clean module and proxy artifacts.
-	@echo "=> (module) Cleaning Rust source..."
-	@cargo clean --manifest-path ./modules/rust/Cargo.toml
-
 	@echo "=> (module) Cleaning .NET source..."
 	@dotnet clean ./modules/dotnet/dotnet.csproj
 
-	@echo "=> (proxy) Cleaning Envoy image..."
-	@docker rmi envoy
+	@echo "=> (module) Cleaning Rust source..."
+	@cargo clean --manifest-path ./modules/rust/Cargo.toml
+
+	@echo "=> (proxy) Cleaning .NET image..."
+	@docker rmi envoy:dotnet
+
+	@echo "=> (proxy) Cleaning Rust image..."
+	@docker rmi envoy:rust
 
 ##@ Deployment
 
-.PHONY: start
+.PHONY: start-dotnet
 start: ## Start proxy container.
-	@echo "=> Starting Envoy Proxy..."
+	@echo "=> (dotnet) Starting Envoy Proxy..."
 	@docker run -d --name envoy -p 9901:9901 -p 10000:10000 envoy:latest
+
+.PHONY: start-rust
+start: ## Start proxy container.
+	@echo "=> (rust) Starting Envoy Proxy..."
+	@docker run -d --name envoy -p 9901:9901 -p 10000:10000 envoy:latest
+
+
 
 .PHONY: stop
 stop: ## Stop proxy container.
