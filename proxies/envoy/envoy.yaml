@@ -23,21 +23,21 @@ static_resources:
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
           http_filters:
-          # - name: envoy.filters.http.wasm
-          #   typed_config:
-          #     "@type": type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
-          #     config:
-          #       name: "wasm_service"
-          #       root_id: "wasm_root_id"
-          #       configuration:
-          #         "@type": "type.googleapis.com/google.protobuf.StringValue"
-          #         value: |
-          #           {}
-          #       vm_config:
-          #         vm_id: "my_vm_id"
-          #         code:
-          #           local:
-          #             filename: /etc/envoy/wasm_service.wasm
+          - name: envoy.filters.http.wasm
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+              config:
+                name: "wasm_service"
+                root_id: "wasm_root_id"
+                configuration:
+                  "@type": "type.googleapis.com/google.protobuf.StringValue"
+                  value: |
+                    {}
+                vm_config:
+                  vm_id: "my_vm_id"
+                  code:
+                    local:
+                      filename: /etc/envoy/wasm_service.wasm
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
