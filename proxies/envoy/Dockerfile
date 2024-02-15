@@ -1,7 +1,9 @@
 FROM envoyproxy/envoy:dev
 
-COPY ./src/proxy/envoy.yaml /etc/envoy/envoy.yaml
+ARG MOD_PATH
 
-# COPY ./src/config/wasm_service.wasm /etc/envoy/wasm_service.wasm
+COPY ./proxies/envoy/envoy.yaml /etc/envoy/envoy.yaml
+
+COPY ${MOD_PATH} /etc/envoy/wasm_service.wasm
 
 RUN chmod go+r /etc/envoy/envoy.yaml
