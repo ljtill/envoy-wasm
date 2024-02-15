@@ -7,9 +7,13 @@ build-module-dotnet:
 	@echo "=> (module) Compiling .NET source..."
 	@dotnet build ./modules/dotnet/dotnet.csproj
 
-build-proxy:
+build-proxy-rust:
 	@echo "=> (proxy) Building Envoy image..."
-	@docker build -t envoy --file ./proxy/Dockerfile .
+	@docker build --build-arg MOD_PATH=./modules/rust/target/wasm32-wasi/debug/module.wasm -t envoy --file ./proxies/envoy/Dockerfile .
+
+build-proxy-dotnet:
+	@echo "=> (proxy) Building Envoy image..."
+	@docker build --build-arg MOD_PATH=./modules/dotnet/bin/Debug/net8.0/wasi-wasm/dotnet.wasm -t envoy --file ./proxies/envoy/Dockerfile .
 
 start-proxy:
 	@echo "=> Starting Envoy Proxy..."
