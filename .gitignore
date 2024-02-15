@@ -1,0 +1,6 @@
+# Rust
+target/
+
+# .NET
+bin/
+obj/
