@@ -34,17 +34,17 @@ all: clean build  ## Execute all build tasks.
 ##@ Build
 
 .PHONY: build
-build: build-dotnet build-rust ## Build all module and proxy artifacts.
+build: build-dotnet build-rust ## Build all module & proxy artifacts.
 
 .PHONY: build-dotnet
-build-dotnet: ## Build dotnet module and envoy proxy image.
+build-dotnet: ## Build dotnet module & envoy proxy image.
 	@echo "=> (module) Compiling .NET source..."
 	@dotnet build ${DOTNET_PROJECT_FILE}
 	@echo "=> (proxy) Building .NET image..."
 	@docker build --build-arg MOD_PATH=${DOTNET_DIR}/bin/Debug/net8.0/wasi-wasm/dotnet.wasm -t envoy:dotnet --file ${ENVOY_DIR}/Dockerfile .
 
 .PHONY: build-rust
-build-rust: ## Build rust module and envoy proxy image.
+build-rust: ## Build rust module & envoy proxy image.
 	@echo "=> (module) Compiling Rust source..."
 	@rustup target add wasm32-wasi
 	@cargo build --manifest-path ${RUST_DIR}/Cargo.toml --target wasm32-wasi
@@ -54,7 +54,7 @@ build-rust: ## Build rust module and envoy proxy image.
 ##@ Test
 
 .PHONY: test
-test: test-dotnet test-rust ## Test all module artifacts.
+test: test-dotnet test-rust ## Test all modules.
 
 .PHONY: test-dotnet
 test-dotnet: ## Test dotnet module.
@@ -66,19 +66,35 @@ test-rust: ## Test rust module.
 	@echo "=> (module) Testing Rust source..."
 	@cargo test --manifest-path ${RUST_DIR}/Cargo.toml
 
+##@ Validate
+
+.PHONY: validate
+validate: validate-dotnet validate-rust ## Validate all modules.
+
+.PHONY: validate-dotnet
+validate-dotnet: ## Validate dotnet module.
+	@echo "=> (module) Validating .NET module..."
+	@wasm-tools validate ${DOTNET_DIR}/bin/Debug/net8.0/wasi-wasm/dotnet.wasm
+
+.PHONY: validate-rust
+validate-rust: ## Validate rust module.
+	@echo "=> (module) Validating Rust module..."
+	@wasm-tools validate ${RUST_DIR}/target/wasm32-wasi/debug/module.wasm
+
 ##@ Clean
 
 .PHONY: clean
-clean: clean-dotnet clean-rust ## Clean all module and proxy artifacts.
+clean: clean-dotnet clean-rust ## Clean all module & proxy artifacts.
 
 .PHONY: clean-dotnet
-clean-dotnet: ## Clean dotnet module and proxy artifacts.
+clean-dotnet: ## Clean dotnet module & proxy artifacts.
 	@echo "=> (module) Cleaning .NET source..."
 	@dotnet clean ${DOTNET_PROJECT_FILE} --verbosity minimal
 	@echo "=> (proxy) Cleaning .NET image..."
 	@docker images -q ${DOTNET_IMAGE_NAME} | xargs -r docker rmi
 
-clean-rust: ## Clean rust module and proxy artifacts.
+.PHONY: clean-rust
+clean-rust: ## Clean rust module & proxy artifacts.
 	@echo "=> (module) Cleaning Rust source..."
 	@cargo clean --manifest-path ${RUST_DIR}/Cargo.toml
 	@echo "=> (proxy) Cleaning Rust image..."
@@ -127,11 +143,11 @@ docker-logs-rust: ## Display envoy proxy container logs.
 ##@ Runtime
 
 .PHONY: wasmtime-run-dotnet
-wasmtime-run-dotnet: ## Run dotnet module with wasmtime.
+wasmtime-run-dotnet: ## Run dotnet module.
 	@echo "=> Running .NET module with wasmtime..."
-	@wasmtime run --dir=${DOTNET_DIR}/bin/Debug/net8.0/wasi-wasm ${DOTNET_DIR}/bin/Debug/net8.0/wasi-wasm/dotnet.wasm
+	@wasmtime run ${DOTNET_DIR}/bin/Debug/net8.0/wasi-wasm/dotnet.wasm
 
 .PHONY: wasmtime-run-rust
-wasmtime-run-rust: ## Run rust module with wasmtime.
+wasmtime-run-rust: ## Run rust module.
 	@echo "=> Running Rust module with wasmtime..."
-	@wasmtime run --dir=${RUST_DIR}/target/wasm32-wasi/debug ${RUST_DIR}/target/wasm32-wasi/debug/module.wasm
+	@wasmtime run ${RUST_DIR}/target/wasm32-wasi/debug/module.wasm
