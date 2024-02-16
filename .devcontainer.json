@@ -16,7 +16,9 @@
         }
     },
     "containerEnv": {
-        "DOTNET_NOLOGO": "true"
+        "DOTNET_NOLOGO": "true",
+        "WASI_VERSION": "wasi-sdk-21",
+        "WASI_SDK_PATH": "/usr/local/lib/wasi-sdk-21.0"
     },
     "postCreateCommand": "bash scripts/dependencies.sh",
     "remoteUser": "root"
