@@ -4,3 +4,6 @@ target/
 # .NET
 bin/
 obj/
+
+# VS Code
+.vscode/
