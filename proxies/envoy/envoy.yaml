@@ -49,23 +49,23 @@ static_resources:
               - match:
                   prefix: "/"
                 route:
-                  host_rewrite_literal: www.bing.com
-                  cluster: service_bing_com
+                  host_rewrite_literal: httpbin.org
+                  cluster: service_httpbin_org
   clusters:
-  - name: service_bing_com
+  - name: service_httpbin_org
     type: LOGICAL_DNS
     dns_lookup_family: V4_ONLY
     load_assignment:
-      cluster_name: service_bing_com
+      cluster_name: service_httpbin_org
       endpoints:
       - lb_endpoints:
         - endpoint:
             address:
               socket_address:
-                address: www.bing.com
+                address: httpbin.org
                 port_value: 443
     transport_socket:
       name: envoy.transport_sockets.tls
       typed_config:
         "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-        sni: www.bing.com
+        sni: httpbin.org
