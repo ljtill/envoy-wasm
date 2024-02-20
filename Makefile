@@ -40,7 +40,8 @@ sdn: start-dotnet
 srs: start-rust
 pdn: stop-dotnet
 prs: stop-rust
-ldk: list-docker
+lcn: list-containers
+lim: list-images
 idn: inspect-dotnet
 irs: inspect-rust
 hdn: shell-dotnet
@@ -68,17 +69,14 @@ build: build-dotnet build-rust build ## Build all artifacts
 build-dotnet: ## Build dotnet module
 	@echo "=> (module) Compiling .NET source..."
 	@dotnet build ${DOTNET_PROJECT_FILE}
+	@echo "=> (proxy) Building .NET image..."
+	@docker build --build-arg MOD_PATH=${DOTNET_DIR}/bin/Debug/net8.0/wasi-wasm/dotnet.wasm -t envoy:dotnet --file ${ENVOY_DIR}/Dockerfile .
 
 .PHONY: build-rust
 build-rust: ## Build rust module
 	@echo "=> (module) Compiling Rust source..."
 	@rustup target add wasm32-wasi
-	@cargo build --manifest-path ${RUST_DIR}/Cargo.toml --target wasm32-wasi
-
-.PHONY:
-build-docker: ## Build docker envoy images
-	@echo "=> (proxy) Building .NET image..."
-	@docker build --build-arg MOD_PATH=${DOTNET_DIR}/bin/Debug/net8.0/wasi-wasm/dotnet.wasm -t envoy:dotnet --file ${ENVOY_DIR}/Dockerfile .
+	@cargo build --manifest-path ${RUST_DIR}/Cargo.toml --target wasm32-wasi --target-dir ${RUST_DIR}/target
 	@echo "=> (proxy) Building Rust image..."
 	@docker build --build-arg MOD_PATH=${RUST_DIR}/target/wasm32-wasi/debug/module.wasm -t envoy:rust --file ${ENVOY_DIR}/Dockerfile .
 
@@ -121,16 +119,13 @@ clean: clean-dotnet clean-rust clean ## Clean all artifacts
 clean-dotnet: ## Clean dotnet module & proxy artifacts
 	@echo "=> (module) Cleaning .NET source..."
 	@dotnet clean ${DOTNET_PROJECT_FILE} --verbosity minimal
+	@echo "=> (proxy) Cleaning .NET image..."
+	@docker images -q ${DOTNET_IMAGE_NAME} | xargs -r docker rmi
 
 .PHONY: clean-rust
 clean-rust: ## Clean rust module & proxy artifacts
 	@echo "=> (module) Cleaning Rust source..."
 	@cargo clean --manifest-path ${RUST_DIR}/Cargo.toml
-
-.PHONY: clean-docker
-clean-docker:
-	@echo "=> (proxy) Cleaning .NET image..."
-	@docker images -q ${DOTNET_IMAGE_NAME} | xargs -r docker rmi
 	@echo "=> (proxy) Cleaning Rust image..."
 	@docker images -q ${RUST_IMAGE_NAME} | xargs -r docker rmi
 
@@ -142,12 +137,12 @@ start: start-dotnet start-rust ## Start all envoy containers
 .PHONY: start-dotnet
 start-dotnet: ## Start envoy container
 	@echo "=> (dotnet) Starting envoy..."
-	@docker run -d --name ${ENVOY_NAME}-dotnet -p 9901:9905 -p 10000:10005 ${DOTNET_IMAGE_NAME}
+	@docker run -d --name ${ENVOY_NAME}-dotnet -p 9905:9901 -p 10005:10000 ${DOTNET_IMAGE_NAME}
 
 .PHONY: start-rust
 start-rust: ## Start envoy container
 	@echo "=> (rust) Starting envoy..."
-	@docker run -d --name ${ENVOY_NAME}-rust -p 9901:9906 -p 10000:10006 ${RUST_IMAGE_NAME}
+	@docker run -d --name ${ENVOY_NAME}-rust -p 9906:9901 -p 10006:10000 ${RUST_IMAGE_NAME}
 
 .PHONY: stop
 stop: stop-dotnet stop-rust ## Stop all envoy containers
@@ -164,10 +159,15 @@ stop-rust: ## Stop envoy container
 
 ##@ Management
 
-.PHONY: list
-list: ## List all running containers
+.PHONY: list-containers
+list-containers: ## List all containers
 	@echo "=> Listing running containers..."
 	@docker container list --all
+
+.PHONY: list-images
+list-images: ## List all images
+	@echo "=> Listing images..."
+	@docker images --all
 
 .PHONY: inspect-rust
 inspect-rust: ## Inspect rust image
