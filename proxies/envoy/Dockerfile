@@ -1,4 +1,4 @@
-FROM envoyproxy/envoy:dev
+FROM ljtill/envoy:latest
 
 ARG MOD_PATH
 
