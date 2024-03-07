@@ -16,6 +16,7 @@ ENVOY_DIR := ${ROOT_DIR}/proxies/envoy
 
 DOTNET_IMAGE_NAME := envoy:dotnet
 DOTNET_PROJECT_FILE := ${DOTNET_DIR}/Envoy.csproj
+DOTNET_VERSION := net9.0
 
 RUST_IMAGE_NAME := envoy:rust
 RUST_MANIFEST_FILE := ${RUST_DIR}/Cargo.toml
@@ -68,9 +69,9 @@ build: build-dotnet build-rust build ## Build all artifacts
 .PHONY: build-dotnet
 build-dotnet: ## Build dotnet module
 	@echo "=> (module) Compiling .NET source..."
-	@dotnet build ${DOTNET_PROJECT_FILE}
+	@dotnet build ${DOTNET_PROJECT_FILE} -c Release
 	@echo "=> (proxy) Building .NET image..."
-	@docker build --build-arg MOD_PATH=${DOTNET_DIR}/bin/Debug/net8.0/wasi-wasm/dotnet.wasm -t envoy:dotnet --file ${ENVOY_DIR}/Dockerfile .
+	@docker build --build-arg MOD_PATH=${DOTNET_DIR}/bin/Release/${DOTNET_VERSION}/wasi-wasm/AppBundle/Envoy.wasm -t envoy:dotnet --file ${ENVOY_DIR}/Dockerfile .
 
 .PHONY: build-rust
 build-rust: ## Build rust module
@@ -79,6 +80,10 @@ build-rust: ## Build rust module
 	@cargo build --manifest-path ${RUST_DIR}/Cargo.toml --target wasm32-wasi --target-dir ${RUST_DIR}/target
 	@echo "=> (proxy) Building Rust image..."
 	@docker build --build-arg MOD_PATH=${RUST_DIR}/target/wasm32-wasi/debug/module.wasm -t envoy:rust --file ${ENVOY_DIR}/Dockerfile .
+
+##@ Generate
+# TODO: Implement wit-bindgen targets
+# wit-bindgen c-sharp --runtime native-aot ./modules/dotnet/Envoy.wit --out-dir ./modules/dotnet/Generated/
 
 ##@ Test
 
@@ -103,12 +108,12 @@ validate: validate-dotnet validate-rust ## Validate all modules
 .PHONY: validate-dotnet
 validate-dotnet: ## Validate dotnet module
 	@echo "=> (module) Validating .NET module..."
-	@wasm-tools validate ${DOTNET_DIR}/bin/Debug/net8.0/wasi-wasm/dotnet.wasm
+	@wasm-tools validate -vv ${DOTNET_DIR}/bin/Release/${DOTNET_VERSION}/wasi-wasm/AppBundle/Envoy.wasm
 
 .PHONY: validate-rust
 validate-rust: ## Validate rust module
 	@echo "=> (module) Validating Rust module..."
-	@wasm-tools validate ${RUST_DIR}/target/wasm32-wasi/debug/module.wasm
+	@wasm-tools validate -vv ${RUST_DIR}/target/wasm32-wasi/debug/module.wasm
 
 ##@ Clean
 
@@ -206,7 +211,7 @@ logs-rust: ## Display envoy container logs
 .PHONY: run-dotnet
 run-dotnet: ## Run dotnet module
 	@echo "=> Running .NET module with wasmtime..."
-	@wasmtime run ${DOTNET_DIR}/bin/Debug/net8.0/wasi-wasm/dotnet.wasm
+	@wasmtime run ${DOTNET_DIR}/bin/Debug/net8.0/wasi-wasm/AppBundle/Envoy.wasm
 
 .PHONY: run-rust
 run-rust: ## Run rust module
