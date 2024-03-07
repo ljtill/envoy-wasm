@@ -7,3 +7,6 @@ obj/
 
 # VS Code
 .vscode/
+
+# WASM
+*.wasm
