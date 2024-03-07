@@ -4,22 +4,22 @@ SHELL:=/usr/bin/env bash
 # Directories
 #
 
-# ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 ROOT_DIR := .
-DOTNET_DIR := ${ROOT_DIR}/modules/dotnet
-RUST_DIR := ${ROOT_DIR}/modules/rust
-ENVOY_DIR := ${ROOT_DIR}/proxies/envoy
+DOTNET_ROOT_DIR := ${ROOT_DIR}/modules/dotnet
+DOTNET_BUILD_DIR := ${DOTNET_ROOT_DIR}/bin/Debug/net9.0/wasi-wasm/AppBundle
+RUST_ROOT_DIR := ${ROOT_DIR}/modules/rust
+RUST_BUILD_DIR := ${ROOT_DIR}/target/wasm32-wasi/debug
+ENVOY_ROOT_DIR := ${ROOT_DIR}/proxies/envoy
 
 #
 # Tools
 #
 
 DOTNET_IMAGE_NAME := envoy:dotnet
-DOTNET_PROJECT_FILE := ${DOTNET_DIR}/Envoy.csproj
-DOTNET_VERSION := net9.0
+DOTNET_PROJECT_FILE := ${DOTNET_ROOT_DIR}/Envoy.csproj
 
 RUST_IMAGE_NAME := envoy:rust
-RUST_MANIFEST_FILE := ${RUST_DIR}/Cargo.toml
+RUST_MANIFEST_FILE := ${RUST_ROOT_DIR}/Cargo.toml
 
 ENVOY_NAME := envoy
 
@@ -52,6 +52,10 @@ lrs: logs-rust
 rdn: run-dotnet
 rrs: run-rust
 
+#
+# Targets
+#
+
 ##@ General
 
 .PHONY: help
@@ -69,17 +73,17 @@ build: build-dotnet build-rust build ## Build all artifacts
 .PHONY: build-dotnet
 build-dotnet: ## Build dotnet module
 	@echo "=> (module) Compiling .NET source..."
-	@dotnet build ${DOTNET_PROJECT_FILE} -c Release
+	@dotnet build ${DOTNET_PROJECT_FILE}
 	@echo "=> (proxy) Building .NET image..."
-	@docker build --build-arg MOD_PATH=${DOTNET_DIR}/bin/Release/${DOTNET_VERSION}/wasi-wasm/AppBundle/Envoy.wasm -t envoy:dotnet --file ${ENVOY_DIR}/Dockerfile .
+	@docker build --build-arg MOD_PATH=${DOTNET_BUILD_DIR}/Envoy.wasm -t ${ENVOY_NAME}:dotnet --file ${ENVOY_ROOT_DIR}/Dockerfile .
 
 .PHONY: build-rust
 build-rust: ## Build rust module
 	@echo "=> (module) Compiling Rust source..."
 	@rustup target add wasm32-wasi
-	@cargo build --manifest-path ${RUST_DIR}/Cargo.toml --target wasm32-wasi --target-dir ${RUST_DIR}/target
+	@cargo build --manifest-path ${RUST_ROOT_DIR}/Cargo.toml --target wasm32-wasi --target-dir ${RUST_ROOT_DIR}/target
 	@echo "=> (proxy) Building Rust image..."
-	@docker build --build-arg MOD_PATH=${RUST_DIR}/target/wasm32-wasi/debug/module.wasm -t envoy:rust --file ${ENVOY_DIR}/Dockerfile .
+	@docker build --build-arg MOD_PATH=${RUST_BUILD_DIR}/module.wasm -t ${ENVOY_NAME}:rust --file ${ENVOY_ROOT_DIR}/Dockerfile .
 
 ##@ Generate
 # TODO: Implement wit-bindgen targets
@@ -108,7 +112,7 @@ validate: validate-dotnet validate-rust ## Validate all modules
 .PHONY: validate-dotnet
 validate-dotnet: ## Validate dotnet module
 	@echo "=> (module) Validating .NET module..."
-	@wasm-tools validate -vv ${DOTNET_DIR}/bin/Release/${DOTNET_VERSION}/wasi-wasm/AppBundle/Envoy.wasm
+	@wasm-tools validate -vv ${DOTNET_BUILD_DIR}/Envoy.wasm
 
 .PHONY: validate-rust
 validate-rust: ## Validate rust module
@@ -121,14 +125,14 @@ validate-rust: ## Validate rust module
 clean: clean-dotnet clean-rust clean ## Clean all artifacts
 
 .PHONY: clean-dotnet
-clean-dotnet: ## Clean dotnet module & proxy artifacts
+clean-dotnet: ## Clean dotnet artifacts
 	@echo "=> (module) Cleaning .NET source..."
 	@dotnet clean ${DOTNET_PROJECT_FILE} --verbosity minimal
 	@echo "=> (proxy) Cleaning .NET image..."
 	@docker images -q ${DOTNET_IMAGE_NAME} | xargs -r docker rmi
 
 .PHONY: clean-rust
-clean-rust: ## Clean rust module & proxy artifacts
+clean-rust: ## Clean rust artifacts
 	@echo "=> (module) Cleaning Rust source..."
 	@cargo clean --manifest-path ${RUST_DIR}/Cargo.toml
 	@echo "=> (proxy) Cleaning Rust image..."
@@ -211,9 +215,9 @@ logs-rust: ## Display envoy container logs
 .PHONY: run-dotnet
 run-dotnet: ## Run dotnet module
 	@echo "=> Running .NET module with wasmtime..."
-	@wasmtime run ${DOTNET_DIR}/bin/Debug/net8.0/wasi-wasm/AppBundle/Envoy.wasm
+	@wasmtime run ${DOTNET_BUILD_DIR}/Envoy.wasm
 
 .PHONY: run-rust
 run-rust: ## Run rust module
 	@echo "=> Running Rust module with wasmtime..."
-	@wasmtime run ${RUST_DIR}/target/wasm32-wasi/debug/module.wasm
+	@wasmtime run ${RUST_BUILD_DIR}/module.wasm
