@@ -67,13 +67,10 @@ all: clean build  ## Execute all build tasks
 
 ##@ Build
 
-.PHONY: build
-build: build-dotnet build-rust build ## Build all artifacts
-
 .PHONY: build-dotnet
 build-dotnet: ## Build dotnet module
 	@echo "=> (module) Compiling .NET source..."
-	@dotnet build ${DOTNET_PROJECT_FILE}
+	@dotnet build -c Debug ${DOTNET_PROJECT_FILE}
 	@echo "=> (proxy) Building .NET image..."
 	@docker build --build-arg MOD_PATH=${DOTNET_BUILD_DIR}/Envoy.wasm -t ${ENVOY_NAME}:dotnet --file ${ENVOY_ROOT_DIR}/Dockerfile .
 
@@ -91,9 +88,6 @@ build-rust: ## Build rust module
 
 ##@ Test
 
-.PHONY: test
-test: test-dotnet test-rust ## Test all modules
-
 .PHONY: test-dotnet
 test-dotnet: ## Test dotnet module
 	@echo "=> (module) Testing .NET source..."
@@ -105,9 +99,6 @@ test-rust: ## Test rust module
 	@cargo test --manifest-path ${RUST_DIR}/Cargo.toml
 
 ##@ Validate
-
-.PHONY: validate
-validate: validate-dotnet validate-rust ## Validate all modules
 
 .PHONY: validate-dotnet
 validate-dotnet: ## Validate dotnet module
@@ -121,13 +112,12 @@ validate-rust: ## Validate rust module
 
 ##@ Clean
 
-.PHONY: clean
-clean: clean-dotnet clean-rust clean ## Clean all artifacts
-
 .PHONY: clean-dotnet
 clean-dotnet: ## Clean dotnet artifacts
 	@echo "=> (module) Cleaning .NET source..."
 	@dotnet clean ${DOTNET_PROJECT_FILE} --verbosity minimal
+	@echo "=> (module) Removing compiled module..."
+	@rm -f ${DOTNET_ROOT_DIR}/Envoy.wasm
 	@echo "=> (proxy) Cleaning .NET image..."
 	@docker images -q ${DOTNET_IMAGE_NAME} | xargs -r docker rmi
 
@@ -140,33 +130,27 @@ clean-rust: ## Clean rust artifacts
 
 ##@ Operate
 
-.PHONY: start
-start: start-dotnet start-rust ## Start all envoy containers
-
 .PHONY: start-dotnet
-start-dotnet: ## Start envoy container
+start-dotnet: ## Start dotnet container
 	@echo "=> (dotnet) Starting envoy..."
 	@docker run -d --name ${ENVOY_NAME}-dotnet -p 9905:9901 -p 10005:10000 ${DOTNET_IMAGE_NAME}
 
 .PHONY: start-rust
-start-rust: ## Start envoy container
+start-rust: ## Start rust container
 	@echo "=> (rust) Starting envoy..."
 	@docker run -d --name ${ENVOY_NAME}-rust -p 9906:9901 -p 10006:10000 ${RUST_IMAGE_NAME}
 
-.PHONY: stop
-stop: stop-dotnet stop-rust ## Stop all envoy containers
-
 .PHONY: stop-dotnet
-stop-dotnet: ## Stop envoy container
+stop-dotnet: ## Stop dotnet container
 	@echo "=> Stopping envoy..."
 	@docker stop ${ENVOY_NAME}-dotnet | xargs docker rm
 
 .PHONY: stop-rust
-stop-rust: ## Stop envoy container
+stop-rust: ## Stop rust container
 	@echo "=> Stopping envoy..."
 	@docker stop ${ENVOY_NAME}-rust | xargs docker rm
 
-##@ Management
+##@ Manage
 
 .PHONY: list-containers
 list-containers: ## List all containers
@@ -178,35 +162,37 @@ list-images: ## List all images
 	@echo "=> Listing images..."
 	@docker images --all
 
-.PHONY: inspect-rust
-inspect-rust: ## Inspect rust image
-	@echo "=> Inspecting Rust container..."
-	@docker inspect ${ENVOY_NAME}-rust
+##@ Debug
 
 .PHONY: inspect-dotnet
 inspect-dotnet: ## Inspect dotnet image
 	@echo "=> Inspecting .NET container..."
 	@docker inspect ${ENVOY_NAME}-dotnet
 
-.PHONY: shell-rust
-shell-rust: ## Launch shell in envoy (rust) container
-	@echo "=> Opening shell in Rust container..."
-	@docker exec -it ${ENVOY_NAME}-rust /bin/sh
+.PHONY: inspect-rust
+inspect-rust: ## Inspect rust image
+	@echo "=> Inspecting Rust container..."
+	@docker inspect ${ENVOY_NAME}-rust
 
 .PHONY: shell-dotnet
-shell-dotnet: ## Launch shell in envoy (dotnet) container
+shell-dotnet: ## Launch dotnet shell
 	@echo "=> Opening shell in .NET container..."
 	@docker exec -it ${ENVOY_NAME}-dotnet /bin/sh
+
+.PHONY: shell-rust
+shell-rust: ## Launch rust shell
+	@echo "=> Opening shell in Rust container..."
+	@docker exec -it ${ENVOY_NAME}-rust /bin/sh
 
 ##@ Logs
 
 .PHONY: logs-dotnet
-logs-dotnet: ## Display envoy container logs
+logs-dotnet: ## Display dotnet logs
 	@echo "=> Showing envoy logs..."
 	@docker logs -f ${ENVOY_NAME}-dotnet
 
 .PHONY: logs-rust
-logs-rust: ## Display envoy container logs
+logs-rust: ## Display envoy logs
 	@echo "=> Showing envoy logs..."
 	@docker logs -f ${ENVOY_NAME}-rust
 
@@ -215,9 +201,9 @@ logs-rust: ## Display envoy container logs
 .PHONY: run-dotnet
 run-dotnet: ## Run dotnet module
 	@echo "=> Running .NET module with wasmtime..."
-	@wasmtime run ${DOTNET_BUILD_DIR}/Envoy.wasm
+	@wasmtime --dir . -- ${DOTNET_BUILD_DIR}/Envoy.wasm
 
 .PHONY: run-rust
 run-rust: ## Run rust module
 	@echo "=> Running Rust module with wasmtime..."
-	@wasmtime run ${RUST_BUILD_DIR}/module.wasm
+	@wasmtime --dir . -- ${RUST_BUILD_DIR}/module.wasm
